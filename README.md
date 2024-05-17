@@ -1,8 +1,7 @@
 ﻿# DailyBread
 # This is part of the data infrastructure layer for my upcoming app
 # The 'NBA PY TO SQL' is to be run first to establish the database and" initial game information
-# within POSTGRESQL. Database should be created first, with one "games" table and several
-# columns
+# within POSTGRESQL. Database should be created first, with one "games" table and several columns:
 # gameid
 # visitorteamname
 # hometeamname
@@ -22,4 +21,5 @@
 # hometotpoints
 # attendance
 # arena
+# Ensure latest chrome driver and developer testing chrome browser are in same folder with scripts
 
