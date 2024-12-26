@@ -35,7 +35,9 @@ chrome_driver_path = os.path.join(current_directory,"chromedriver-win64", "chrom
 print("Chrome binary path:", chrome_binary_path)
 print("Chrome driver path:", chrome_driver_path)
 
-URL = "https://www.flashscore.ca/basketball/usa/nba-2022-2023/results/"
+#current year - results, when season ends, use year format from older programs
+#didnt work, using same format to test 
+URL = "https://www.flashscore.ca/basketball/usa/nba-2024-2025/results/"
 
 # Initialize WebDriver
 chrome_options = Options()
@@ -222,7 +224,7 @@ for index, row in games_df.iterrows():
     month = month_map.get(month_abbr, '00')
 
     # Determine the year based on the month
-    year = '2023' if month_abbr in ['Jan', 'Feb', 'Mar', 'Apr','pr','May','Jun'] else '2022'
+    year = '2025' if month_abbr in ['Jan', 'Feb', 'Mar', 'Apr','pr','May','Jun'] else '2024'
 
     # Create the game ID
     gameid = year + month + day + time_24_hour + away_team_abbr + home_team_abbr
@@ -243,7 +245,7 @@ conn = psycopg2.connect(
     host="localhost",  
     port="5432"
 )
-# Define a function to insert data into the database
+
 def insert_data_into_db(games_df, conn):
     cur = conn.cursor()
     for index, row in games_df.iterrows():
@@ -309,6 +311,32 @@ def insert_data_into_db(games_df, conn):
             print(traceback.format_exc())
             conn.rollback()
             continue
+        #     # Match gameid with the ones in your SQL database
+        #     cur.execute("SELECT * FROM games WHERE gameid=%s", (row['gameid'],))
+
+        #     match = cur.fetchone()
+        #     if match:
+        #         print("Inserting data into database:")
+        #         print(f"gameid: {gameid}")
+        #         print(f"visitorq1: {row['visitorq1']}, visitorq2: {row['visitorq2']}, visitorq3: {row['visitorq3']}, visitorq4: {row['visitorq4']}")
+        #         print(f"visitorot1: {row['visitorot1']}, visitorot2: {row['visitorot2']}")
+        #         print(f"homeq1: {row['homeq1']}, homeq2: {row['homeq2']}, homeq3: {row['homeq3']}, homeq4: {row['homeq4']}")
+        #         print(f"homeot1: {row['homeot1']}, homeot2: {row['homeot2']}")
+        #         # Insert corresponding quarter and OT scores into the database
+        #         cur.execute("""UPDATE games SET visitorq1=%s, visitorq2=%s, visitorq3=%s, visitorq4=%s, visitorot1=%s,
+        #                     visitorot2=%s, homeq1=%s, homeq2=%s, homeq3=%s, homeq4=%s, homeot1=%s, homeot2=%s WHERE gameid=%s""",
+        #                     (row['visitorq1'], row['visitorq2'], row['visitorq3'], row['visitorq4'],
+        #                      row['visitorot1'], row['visitorot2'], row['homeq1'],row['homeq2'], row['homeq3'], 
+        #                      row['homeq4'], row['homeot1'], row['homeot2'], row['gameid']))
+        #         conn.commit()
+        #     else:
+        #         print(f"No match found for gameid: {gameid}. Skipping insertion.")
+        # except Exception as e:
+        #     print(f"Error inserting data: {e}")
+        #     print(f"Error occurred at row index {index}: {row}")
+        #     print(traceback.format_exc())  # This prints the stack trace
+        #     conn.rollback()  # Rollback the transaction on error
+        #     continue
 
 try:
     # Call the function to insert data into the database
@@ -318,7 +346,7 @@ finally:
     conn.close()
 
 # Output the DataFrame to a CSV file
-csv_filename = "NBA22_23seasondata.csv"
+csv_filename = "NBA24_25seasondata.csv"
 games_df.to_csv(csv_filename, index=False)
 #Open the CSV file with the default application
 os.system(f'start {csv_filename}')

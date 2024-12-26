@@ -256,34 +256,66 @@ def insert_data_into_db(games_df, conn):
     cur = conn.cursor()
     for index, row in games_df.iterrows():
         try:
-            # Strip leading and trailing whitespaces from the gameid
-            gameid = row['gameid'].strip()
-
-            # Match gameid with the ones in your SQL database
-            cur.execute("SELECT * FROM games WHERE gameid=%s", (row['gameid'],))
+            # Extract date and teams from gameid
+            game_date = row['gameid'][:8]
+            teams = row['gameid'][-6:]
+            
+            # First, find the matching game
+            cur.execute("""
+                SELECT gameid, visitorq1, visitorq2, visitorq3, visitorq4, 
+                       visitorot1, visitorot2, homeq1, homeq2, homeq3, 
+                       homeq4, homeot1, homeot2
+                FROM games 
+                WHERE gameid LIKE %s 
+                AND gameid LIKE %s
+            """, (f"{game_date}%", f"%{teams}"))
 
             match = cur.fetchone()
             if match:
-                print("Inserting data into database:")
-                print(f"gameid: {gameid}")
-                print(f"visitorq1: {row['visitorq1']}, visitorq2: {row['visitorq2']}, visitorq3: {row['visitorq3']}, visitorq4: {row['visitorq4']}")
-                print(f"visitorot1: {row['visitorot1']}, visitorot2: {row['visitorot2']}")
-                print(f"homeq1: {row['homeq1']}, homeq2: {row['homeq2']}, homeq3: {row['homeq3']}, homeq4: {row['homeq4']}")
-                print(f"homeot1: {row['homeot1']}, homeot2: {row['homeot2']}")
-                # Insert corresponding quarter and OT scores into the database
-                cur.execute("""UPDATE games SET visitorq1=%s, visitorq2=%s, visitorq3=%s, visitorq4=%s, visitorot1=%s,
-                            visitorot2=%s, homeq1=%s, homeq2=%s, homeq3=%s, homeq4=%s, homeot1=%s, homeot2=%s WHERE gameid=%s""",
-                            (row['visitorq1'], row['visitorq2'], row['visitorq3'], row['visitorq4'],
-                             row['visitorot1'], row['visitorot2'], row['homeq1'],row['homeq2'], row['homeq3'], 
-                             row['homeq4'], row['homeot1'], row['homeot2'], row['gameid']))
-                conn.commit()
+                existing_gameid = match[0]
+                # Convert the database values to the same type as incoming data for comparison
+                existing_values = [
+                    str(v) if v is not None else None for v in match[1:]  # Convert all to strings or None
+                ]
+                new_values = [
+                    str(v) if v is not None else None for v in [
+                        row['visitorq1'], row['visitorq2'], row['visitorq3'], row['visitorq4'],
+                        row['visitorot1'], row['visitorot2'], row['homeq1'], row['homeq2'],
+                        row['homeq3'], row['homeq4'], row['homeot1'], row['homeot2']
+                    ]
+                ]
+
+                # Check if any values are different
+                if existing_values != new_values:
+                    print(f"Found differences for game: {existing_gameid}")
+                    print("Existing values:", existing_values)
+                    print("New values:", new_values)
+                    
+                    # Update only if there are differences
+                    cur.execute("""
+                        UPDATE games 
+                        SET visitorq1=%s, visitorq2=%s, visitorq3=%s, visitorq4=%s, 
+                            visitorot1=%s, visitorot2=%s, homeq1=%s, homeq2=%s, 
+                            homeq3=%s, homeq4=%s, homeot1=%s, homeot2=%s 
+                        WHERE gameid=%s
+                    """, (
+                        row['visitorq1'], row['visitorq2'], row['visitorq3'], row['visitorq4'],
+                        row['visitorot1'], row['visitorot2'], row['homeq1'], row['homeq2'], 
+                        row['homeq3'], row['homeq4'], row['homeot1'], row['homeot2'], 
+                        existing_gameid
+                    ))
+                    conn.commit()
+                    print("Successfully updated scores with new values")
+                else:
+                    print(f"Skipping update for {existing_gameid} - values are identical")
             else:
-                print(f"No match found for gameid: {gameid}. Skipping insertion.")
+                print(f"No match found for date {game_date} with {row['visitorteamname']} @ {row['hometeamname']}")
+
         except Exception as e:
-            print(f"Error inserting data: {e}")
+            print(f"Error processing data: {e}")
             print(f"Error occurred at row index {index}: {row}")
-            print(traceback.format_exc())  # This prints the stack trace
-            conn.rollback()  # Rollback the transaction on error
+            print(traceback.format_exc())
+            conn.rollback()
             continue
 
 try:
